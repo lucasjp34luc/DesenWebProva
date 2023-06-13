@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Tarefas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .button:hover {
+            background-color: #45a049;
+        }
+
+        .task-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .task-item .task-name {
+            flex-grow: 1;
+            margin-right: 10px;
+        }
+
+        .task-item .button {
+            margin-left: 10px;
+        }
+
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+
+        .form {
+            margin-bottom: 20px;
+        }
+
+        .form input[type="text"] {
+            padding: 5px;
+            font-size: 16px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            width: 300px;
+        }
+
+        .form .button {
+            margin-left: 10px;
+            padding: 5px 10px;
+        }
+    </style>
+</head>
+<body>
+<h1>Gerenciador de Tarefas</h1>
+
+<button class="button" onclick="obterTodasTarefas()">Obter todas as tarefas</button>
+
+<ul class="task-list" id="taskList"></ul>
+
+<div class="form">
+    <input type="text" id="taskNameInput" placeholder="Nome da tarefa">
+    <button class="button" onclick="criarTarefa()">Criar tarefa</button>
+</div>
+
+<script>
+
+    function obterTodasTarefas() {
+        fetch('http://localhost:3002/tarefas')
+            .then(response => response.json())
+            .then(data => {
+                const taskList = document.getElementById('taskList');
+                taskList.innerHTML = '';
+
+                data.forEach(task => {
+                    const listItem = document.createElement('li');
+                    listItem.classList.add('task-item');
+
+                    const taskName = document.createElement('span');
+                    taskName.classList.add('task-name');
+                    taskName.innerText = task.nome;
+                    if (task.feito) {
+                        taskName.classList.add('completed');
+                    }
+
+                    const deleteButton = document.createElement('button');
+                    deleteButton.classList.add('button');
+                    deleteButton.innerText = 'Excluir';
+                    deleteButton.onclick = () => excluirTarefa(task.id);
+
+                    const markAsDoneButton = document.createElement('button');
+                    markAsDoneButton.classList.add('button');
+                    if (task.feito) {
+                        markAsDoneButton.innerText = 'Desmarcar';
+                        markAsDoneButton.onclick = () => atualizarTarefa(task.id, task.nome, false);
+                    } else {
+                        markAsDoneButton.innerText = 'Concluir';
+                        markAsDoneButton.onclick = () => atualizarTarefa(task.id, task.nome, true);
+                    }
+
+                    const updateButton = document.createElement('button');
+                    updateButton.classList.add('button');
+                    updateButton.innerText = 'Atualizar';
+                    updateButton.onclick = () => {
+                        const newTaskName = prompt('Digite o novo nome da tarefa:', task.nome);
+                        if (newTaskName !== null) {
+                            atualizarTarefa(task.id, newTaskName, task.feito);
+                        }
+                    };
+
+                    listItem.appendChild(taskName);
+                    listItem.appendChild(updateButton);
+                    listItem.appendChild(deleteButton);
+                    listItem.appendChild(markAsDoneButton);
+
+                    taskList.appendChild(listItem);
+                });
+            })
+            .catch(error => console.error(error));
+    }
+
+    function criarTarefa() {
+        const taskNameInput = document.getElementById('taskNameInput');
+        const nome = taskNameInput.value;
+
+        if (nome) {
+            fetch('http://localhost:3002/tarefas', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ nome })
+            })
+                .then(response => response.json())
+                .then(data => {
+                    console.log(data);
+                    taskNameInput.value = '';
+                    obterTodasTarefas();
+                })
+                .catch(error => console.error(error));
+        }
+    }
+
+    function atualizarTarefa(id, nome, feito) {
+        const updatedTask = { nome, feito };
+
+        fetch(`http://localhost:3002/tarefas/${id}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(updatedTask)
+        })
+            .then(response => {
+                if (response.ok) {
+                    obterTodasTarefas();
+                } else {
+                    console.error(`Erro ao atualizar a tarefa com ID ${id}`);
+                }
+            })
+            .catch(error => console.error(error));
+    }
+
+    function excluirTarefa(id) {
+        fetch(`http://localhost:3002/tarefas/${id}`, {
+            method: 'DELETE'
+        })
+            .then(response => {
+                if (response.ok) {
+                    obterTodasTarefas();
+                } else {
+                    console.error(`Erro ao excluir a tarefa com ID ${id}`);
+                }
+            })
+            .catch(error => console.error(error));
+    }
+</script>
+</body>
+</html>
